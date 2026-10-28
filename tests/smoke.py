@@ -1,0 +1,115 @@
+"""End-to-end classroom smoke test. Run against a disposable local database."""
+from http.cookiejar import CookieJar
+from urllib.parse import urlencode
+from urllib.request import build_opener, HTTPCookieProcessor
+from urllib.error import HTTPError
+import re
+import time
+
+BASE = "http://127.0.0.1:8765/"
+
+
+class Student:
+    def __init__(self):
+        self.browser = build_opener(HTTPCookieProcessor(CookieJar()))
+
+    def get(self, path):
+        try:
+            with self.browser.open(BASE + path) as response:
+                return response.geturl(), response.read().decode("utf-8")
+        except HTTPError as response:
+            if response.code == 404:
+                return response.geturl(), response.read().decode("utf-8")
+            raise
+
+    def post(self, path, fields):
+        _, page = self.get(path)
+        token = re.search(r'name="csrf" value="([a-f0-9]+)"', page)
+        assert token, f"Missing CSRF token on {path}"
+        data = urlencode({"csrf": token.group(1), **fields}).encode()
+        with self.browser.open(BASE + "action.php", data=data) as response:
+            return response.geturl(), response.read().decode("utf-8")
+
+
+def has(page, text):
+    assert text in page, f"Expected {text!r} in page"
+
+
+stamp = str(int(time.time()))
+title = f"Scientific Calculator {stamp}"
+owner, borrower = Student(), Student()
+_, home = owner.get("index.php")
+has(home, "Borrow what you need")
+
+url, page = owner.post("account.php", {
+    "action": "register", "name": "Owner Test", "email": f"owner{stamp}@example.test", "password": "testpass123"
+})
+assert "dashboard.php" in url
+has(page, "Welcome to Borrow Box")
+
+url, page = borrower.post("account.php", {
+    "action": "register", "name": "Borrower Test", "email": f"borrower{stamp}@example.test", "password": "testpass123"
+})
+assert "dashboard.php" in url
+
+url, page = owner.post("add.php", {
+    "action": "add_item", "title": title, "category": "Electronics",
+    "description": "For first-year lab work.", "location": "Library entrance"
+})
+item_id = re.search(r"item.php\?id=(\d+)", url).group(1)
+has(page, title)
+
+_, page = borrower.get(f"index.php?q={stamp}&category=Electronics")
+has(page, "1 item found")
+_, page = borrower.get(f"index.php?q={stamp}&category=Books")
+has(page, "0 items found")
+
+item_path = f"item.php?id={item_id}"
+url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "message": "Need it for Friday lab."})
+has(page, "Request sent")
+request_id = re.search(r'name="request_id" value="(\d+)"', page).group(1)
+
+url, page = borrower.post("dashboard.php", {"action": "cancel", "request_id": request_id})
+has(page, "Request cancelled")
+url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "message": "Need it next week."})
+has(page, "Request sent")
+request_id = re.search(r'name="request_id" value="(\d+)"', page).group(1)
+url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "message": "Duplicate request"})
+has(page, "already have an active request")
+
+url, page = owner.post("dashboard.php", {"action": "decline", "request_id": request_id})
+has(page, "Request declined")
+url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "message": "May I try again?"})
+has(page, "Request sent")
+request_id = re.search(r'name="request_id" value="(\d+)"', page).group(1)
+url, page = owner.post("dashboard.php", {"action": "approve", "request_id": request_id})
+has(page, "Request approved")
+_, page = owner.get(f"index.php?q={stamp}")
+has(page, "0 items found")
+url, page = owner.post("dashboard.php", {"action": "return", "request_id": request_id})
+has(page, "available again")
+_, page = owner.get(f"index.php?q={stamp}")
+has(page, "1 item found")
+
+url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "message": "Borrowing it again."})
+has(page, "Request sent")
+
+url, page = owner.post("add.php", {
+    "action": "add_item", "title": "Spare Lab Coat", "category": "Lab",
+    "description": "Clean, medium size.", "location": "Hostel lobby"
+})
+second_id = re.search(r"item.php\?id=(\d+)", url).group(1)
+url, page = owner.post("dashboard.php", {"action": "delete_item", "item_id": second_id})
+has(page, "Listing removed")
+_, page = owner.get(f"item.php?id={second_id}")
+has(page, "Item not found")
+
+url, _ = owner.post("dashboard.php", {"action": "logout"})
+assert "index.php" in url
+url, page = owner.post("account.php", {"action": "login", "email": f"owner{stamp}@example.test", "password": "wrongpass"})
+has(page, "Email or password is incorrect")
+url, page = owner.post("account.php", {"action": "login", "email": f"owner{stamp}@example.test", "password": "testpass123"})
+assert "dashboard.php" in url
+has(page, "Hello, Owner Test")
+
+print("PASS: registration, login, listing, search, filter, request, cancellation, repeat request, duplicate prevention, decline, approval, return, reuse, and removal")
