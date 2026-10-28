@@ -13,6 +13,9 @@
 * {
   box-sizing:border-box
 }
+[hidden] {
+  display:none!important
+}
 html {
   scroll-behavior:smooth
 }
@@ -514,6 +517,13 @@ textarea {
 }
 .request-form p {
   color:var(--muted)
+}
+.request-form .cost-preview {
+  background:var(--soft);
+  color:var(--green);
+  border-radius:8px;
+  padding:10px 12px;
+  font-weight:700
 }
 .hint {
   color:var(--muted)

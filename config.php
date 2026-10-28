@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 session_start();
+date_default_timezone_set('Asia/Kolkata');
 
 const DB_HOST = 'localhost';
 const DB_NAME = 'borrow_box';

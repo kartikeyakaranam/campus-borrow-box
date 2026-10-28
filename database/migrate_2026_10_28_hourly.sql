@@ -1,0 +1,9 @@
+USE borrow_box;
+ALTER TABLE items ADD COLUMN pricing_mode ENUM('flat','hourly') NOT NULL DEFAULT 'flat';
+ALTER TABLE items ADD COLUMN hourly_rate DECIMAL(8,2) NOT NULL DEFAULT 0.00;
+ALTER TABLE items ADD COLUMN minimum_hours SMALLINT UNSIGNED NOT NULL DEFAULT 1;
+ALTER TABLE requests ADD COLUMN pricing_mode ENUM('flat','hourly') NOT NULL DEFAULT 'flat';
+ALTER TABLE requests ADD COLUMN agreed_rate DECIMAL(8,2) NULL;
+ALTER TABLE requests ADD COLUMN billable_hours SMALLINT UNSIGNED NULL;
+ALTER TABLE requests ADD COLUMN start_at DATETIME NULL;
+ALTER TABLE requests ADD COLUMN end_at DATETIME NULL;

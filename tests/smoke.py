@@ -6,7 +6,7 @@ from urllib.error import HTTPError
 import re
 import time
 import base64
-from datetime import date, timedelta
+from datetime import datetime, timedelta
 
 BASE = "http://127.0.0.1:8765/"
 
@@ -52,6 +52,9 @@ def has(page, text):
 
 stamp = str(int(time.time()))
 title = f"Scientific Calculator {stamp}"
+pickup = (datetime.now() + timedelta(days=1)).replace(minute=0, second=0, microsecond=0)
+return_time = pickup + timedelta(hours=4)
+schedule = {"start_at": pickup.strftime("%Y-%m-%dT%H:%M"), "end_at": return_time.strftime("%Y-%m-%dT%H:%M")}
 owner, borrower = Student(), Student()
 _, home = owner.get("index.php")
 has(home, "Borrow what you need")
@@ -98,23 +101,23 @@ _, page = borrower.get(f"index.php?q={stamp}&category=Books")
 has(page, "0 items found")
 
 item_path = f"item.php?id={item_id}"
-url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "message": "Missing payment choice"})
-has(page, "a payment method is missing")
-url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "payment_method": "upi", "message": "Need it for Friday lab."})
+url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "message": "Missing payment choice", **schedule})
+has(page, "Choose cash or UPI")
+url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "payment_method": "upi", "message": "Need it for Friday lab.", **schedule})
 has(page, "Request sent")
 request_id = re.search(r'name="request_id" value="(\d+)"', page).group(1)
 
 url, page = borrower.post("dashboard.php", {"action": "cancel", "request_id": request_id})
 has(page, "Request cancelled")
-url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "payment_method": "upi", "message": "Need it next week."})
+url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "payment_method": "upi", "message": "Need it next week.", **schedule})
 has(page, "Request sent")
 request_id = re.search(r'name="request_id" value="(\d+)"', page).group(1)
-url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "payment_method": "upi", "message": "Duplicate request"})
+url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "payment_method": "upi", "message": "Duplicate request", **schedule})
 has(page, "already have an active request")
 
 url, page = owner.post("dashboard.php", {"action": "decline", "request_id": request_id})
 has(page, "Request declined")
-url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "payment_method": "upi", "message": "May I try again?"})
+url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "payment_method": "upi", "message": "May I try again?", **schedule})
 has(page, "Request sent")
 request_id = re.search(r'name="request_id" value="(\d+)"', page).group(1)
 url, page = owner.post(f"edit.php?id={item_id}", {
@@ -123,12 +126,9 @@ url, page = owner.post(f"edit.php?id={item_id}", {
     "location": "Library entrance", "fee": "95.00"
 })
 has(page, "₹95.00")
-url, page = owner.post("dashboard.php", {"action": "approve", "request_id": request_id, "due_date": "2020-01-01"})
-has(page, "Choose a return date within the next year")
-due_date = (date.today() + timedelta(days=7)).isoformat()
-url, page = owner.post("dashboard.php", {"action": "approve", "request_id": request_id, "due_date": due_date})
+url, page = owner.post("dashboard.php", {"action": "approve", "request_id": request_id})
 has(page, "Request approved")
-has(page, due_date)
+has(page, return_time.strftime("%d %b %Y"))
 has(page, "₹80.00")
 url, page = borrower.post("dashboard.php", {"action": "mark_paid", "request_id": request_id})
 has(page, "This payment cannot be marked received")
@@ -136,7 +136,7 @@ url, page = owner.post("dashboard.php", {"action": "mark_paid", "request_id": re
 has(page, "Payment marked received")
 has(page, "Received")
 _, page = borrower.get("dashboard.php")
-has(page, due_date)
+has(page, return_time.strftime("%d %b %Y"))
 has(page, "₹80.00")
 has(page, "Received")
 _, page = owner.get(f"index.php?q={stamp}")
@@ -146,7 +146,7 @@ has(page, "available again")
 _, page = owner.get(f"index.php?q={stamp}")
 has(page, "1 item found")
 
-url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "payment_method": "upi", "message": "Borrowing it again."})
+url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "payment_method": "upi", "message": "Borrowing it again.", **schedule})
 has(page, "Request sent")
 
 url, page = owner.post("add.php", {
@@ -159,6 +159,42 @@ has(page, "Listing removed")
 _, page = owner.get(f"item.php?id={second_id}")
 has(page, "Item not found")
 
+hourly_title = f"Camera Tripod {stamp}"
+url, page = owner.post("add.php", {
+    "action": "add_item", "title": hourly_title, "category": "Other",
+    "description": "Useful for class filming.", "location": "Library entrance",
+    "pricing_mode": "hourly", "fee": "0.00", "hourly_rate": "12.50", "minimum_hours": "3"
+})
+hourly_id = re.search(r"item.php\?id=(\d+)", url).group(1)
+has(page, "₹12.50 per hour")
+has(page, "3 hours")
+short_schedule = {"start_at": schedule["start_at"], "end_at": (pickup + timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M")}
+url, page = borrower.post(f"item.php?id={hourly_id}", {
+    "action": "request", "item_id": hourly_id, "payment_method": "cash",
+    "message": "Too short", **short_schedule
+})
+has(page, "Choose at least 3 hours")
+hourly_schedule = {"start_at": schedule["start_at"], "end_at": (pickup + timedelta(hours=3, minutes=15)).strftime("%Y-%m-%dT%H:%M")}
+url, page = borrower.post(f"item.php?id={hourly_id}", {
+    "action": "request", "item_id": hourly_id, "payment_method": "cash",
+    "message": "Need it for filming", **hourly_schedule
+})
+has(page, "Request sent")
+has(page, "₹50.00")
+has(page, "4 billed hours")
+hourly_request_id = re.search(re.escape(hourly_title) + r'.*?name="request_id" value="(\d+)"', page, re.S).group(1)
+url, page = owner.post(f"edit.php?id={hourly_id}", {
+    "action": "edit_item", "item_id": hourly_id, "title": hourly_title,
+    "category": "Other", "description": "Useful for class filming.",
+    "location": "Library entrance", "pricing_mode": "hourly", "fee": "0.00",
+    "hourly_rate": "20.00", "minimum_hours": "3"
+})
+has(page, "₹20.00 per hour")
+url, page = owner.post("dashboard.php", {"action": "approve", "request_id": hourly_request_id})
+has(page, "Request approved")
+has(page, "₹50.00")
+has(page, "4 billed hours")
+
 url, _ = owner.post("dashboard.php", {"action": "logout"})
 assert "index.php" in url
 url, page = owner.post("account.php", {"action": "login", "email": f"owner{stamp}@example.test", "password": "wrongpass"})
@@ -167,4 +203,4 @@ url, page = owner.post("account.php", {"action": "login", "email": f"owner{stamp
 assert "dashboard.php" in url
 has(page, "Hello, Owner Test")
 
-print("PASS: two-account flow, owner-only editing, PNG upload, fee snapshot, payment method, owner-only receipt, return dates, reuse, and removal")
+print("PASS: two-account flow, photos, owner-only edits, flat and hourly price snapshots, minimum duration, hour rounding, payment status, return dates, reuse, and removal")
