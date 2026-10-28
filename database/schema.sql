@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS items (
   category ENUM('Books','Electronics','Lab','Other') NOT NULL,
   description TEXT NOT NULL,
   pickup_location VARCHAR(100) NOT NULL,
+  image_filename VARCHAR(80) NULL,
   status ENUM('available','lent') NOT NULL DEFAULT 'available',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
@@ -26,6 +27,7 @@ CREATE TABLE IF NOT EXISTS requests (
   item_id INT NOT NULL,
   borrower_id INT NOT NULL,
   message VARCHAR(250) NOT NULL,
+  due_date DATE NULL,
   status ENUM('pending','approved','declined','returned') NOT NULL DEFAULT 'pending',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,

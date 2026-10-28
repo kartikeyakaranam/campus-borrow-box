@@ -5,20 +5,22 @@ A student-scale full-stack web project for ICT3131: a campus item borrowing boar
 ## Features
 
 1. Create an account and log in securely.
-2. List an item with category, description and pickup location.
+2. List an item with category, description, pickup location, and an optional photo.
 3. Search listings by keyword and filter by category.
 4. Request an item with a message to the owner.
 5. Approve or decline incoming requests.
 6. Mark a loan returned so the item becomes available again.
 7. View all owned items and incoming/outgoing requests in one dashboard.
 8. Remove an available listing or cancel a pending request.
+9. Edit an available listing when its details change.
+10. Set a return date when approving a request; both students see it in their dashboards.
 
 The novelty is a **reuse loop**: one item can help multiple students over time, with the return action reopening it for the next person. The UI tells that story without needing payments, maps, or AI.
 
 ## Run locally
 
 1. Install/start MAMP or XAMPP with PHP 8.1+ and MySQL. Enable the PHP `mysqli` and `mbstring` extensions.
-2. Import `database/schema.sql` using phpMyAdmin or `mysql -u root -p < database/schema.sql`.
+2. Import `database/schema.sql` using phpMyAdmin or `mysql -u root -p < database/schema.sql`. If you already imported the earlier version, run `database/migrate_2026_10_28.sql` once instead.
 3. Edit the four database constants in `config.php` to match your local MySQL settings.
 4. Put this folder inside your server's document root, then open `http://localhost/campus-borrow-box/`.
 5. Register two test accounts. With the first, list an item. With the second, request it. Switch back to approve, then mark it returned.
@@ -31,8 +33,8 @@ Do not open `index.php` as a local file; PHP must run through a web server.
 
 | Student | Two modules/pages to explain | Demo features |
 | --- | --- | --- |
-| Student 1 | Explore (`index.php`) and Item detail (`item.php`) | Search/filter; send a request |
-| Student 2 | List item (`add.php`) and Dashboard (`dashboard.php`) | Publish a listing; approve and return it |
+| Student 1 | Explore (`index.php`) and Item detail (`item.php`) | Search/filter; send a request; explain item photos |
+| Student 2 | List/edit item (`add.php`, `edit.php`) and Dashboard (`dashboard.php`) | Publish/edit a listing; approve with a return date; mark returned |
 
 Both should understand `account.php`, `action.php`, `config.php`, the database tables, and the shared layout. Add your actual names, registration numbers, screenshots, code excerpts, and GitHub URL to the supplied report template. Do not claim testing that was not performed.
 
@@ -54,3 +56,7 @@ XML and AJAX were covered in the lectures but are deliberately outside this smal
 Passwords are hashed, database inputs use prepared statements, output is escaped, and changing forms include a CSRF token. This is suitable for a local classroom demo. There is no email verification or automated dispute handling, and pickup is coordinated manually through the request message.
 
 The project report draft and actual running-site screenshots are in `report/`. The draft follows the supplied template, but its student identities, faculty, program, signatures, confirmed work split, and GitHub URL still need real information before submission.
+
+## Photos
+
+Photos are optional and limited to one JPEG, PNG, or WebP under 2 MB per item. The web server must be able to write to `uploads/`. The folder is excluded from version control except for its setup files. The Apache rule in that folder blocks PHP execution; on another web server, configure the equivalent rule before accepting public uploads. New screenshots and report text should be captured after these features are tested.

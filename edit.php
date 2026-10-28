@@ -1,0 +1,11 @@
+<?php
+require_once __DIR__ . '/partials.php'; require_login();
+$id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT) ?: 0;
+$s=db()->prepare("SELECT * FROM items WHERE id=? AND owner_id=? AND status='available'");
+$uid=user_id(); $s->bind_param('ii',$id,$uid); $s->execute(); $item=$s->get_result()->fetch_assoc();
+if (!$item) { http_response_code(404); page_header('Listing not found'); echo '<section class="empty"><h1>Listing not found</h1><p>Only your available items can be edited.</p><a href="dashboard.php">Back to dashboard</a></section>'; page_footer(); exit; }
+page_header('Edit listing');
+?>
+<section class="page-intro"><p class="eyebrow">Keep your listing accurate</p><h1>Edit listing</h1><p>Update the details students see before borrowing your item.</p></section>
+<section class="panel form-panel"><form action="action.php" method="post" enctype="multipart/form-data" data-validate><input type="hidden" name="csrf" value="<?= e(csrf()) ?>"><input type="hidden" name="item_id" value="<?= (int)$id ?>"><div class="field"><label for="title">Item name</label><input id="title" name="title" required maxlength="100" value="<?= e($item['title']) ?>"></div><div class="field"><label for="category">Category</label><select id="category" name="category" required><?php foreach (['Books','Electronics','Lab','Other'] as $category): ?><option value="<?= e($category) ?>" <?= $item['category']===$category ? 'selected' : '' ?>><?= e($category) ?></option><?php endforeach; ?></select></div><div class="field"><label for="description">Description</label><textarea id="description" name="description" required maxlength="600" rows="5"><?= e($item['description']) ?></textarea><small><span data-count-for="description"><?= mb_strlen($item['description']) ?></span>/600 characters</small></div><div class="field"><label for="location">Pickup location</label><input id="location" name="location" required maxlength="100" value="<?= e($item['pickup_location']) ?>"></div><div class="field"><label for="image">Item photo (optional)</label><input id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp"><small>JPEG, PNG or WebP, up to 2 MB.</small></div><button class="button" name="action" value="edit_item">Save changes</button></form></section>
+<?php page_footer(); ?>

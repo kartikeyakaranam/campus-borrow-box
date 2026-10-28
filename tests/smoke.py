@@ -1,10 +1,12 @@
 """End-to-end classroom smoke test. Run against a disposable local database."""
 from http.cookiejar import CookieJar
 from urllib.parse import urlencode
-from urllib.request import build_opener, HTTPCookieProcessor
+from urllib.request import build_opener, HTTPCookieProcessor, Request
 from urllib.error import HTTPError
 import re
 import time
+import base64
+from datetime import date, timedelta
 
 BASE = "http://127.0.0.1:8765/"
 
@@ -28,6 +30,19 @@ class Student:
         assert token, f"Missing CSRF token on {path}"
         data = urlencode({"csrf": token.group(1), **fields}).encode()
         with self.browser.open(BASE + "action.php", data=data) as response:
+            return response.geturl(), response.read().decode("utf-8")
+
+    def post_image(self, path, fields):
+        _, page = self.get(path)
+        token = re.search(r'name="csrf" value="([a-f0-9]+)"', page).group(1)
+        boundary = "BorrowBoxTestBoundary"
+        parts = []
+        for name, value in {"csrf": token, **fields}.items():
+            parts.append(f"--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n{value}\r\n".encode())
+        png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==")
+        parts += [f'--{boundary}\r\nContent-Disposition: form-data; name="image"; filename="item.png"\r\nContent-Type: image/png\r\n\r\n'.encode(), png, f"\r\n--{boundary}--\r\n".encode()]
+        request = Request(BASE + "action.php", data=b"".join(parts), headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
+        with self.browser.open(request) as response:
             return response.geturl(), response.read().decode("utf-8")
 
 
@@ -58,6 +73,23 @@ url, page = owner.post("add.php", {
 })
 item_id = re.search(r"item.php\?id=(\d+)", url).group(1)
 has(page, title)
+_, page = borrower.get(f"edit.php?id={item_id}")
+has(page, "Only your available items can be edited")
+_, page = borrower.post("dashboard.php", {
+    "action": "edit_item", "item_id": item_id, "title": "Stolen title",
+    "category": "Other", "description": "Unauthorized change", "location": "Elsewhere"
+})
+has(page, "Only your available listing can be edited")
+url, page = owner.post_image(f"edit.php?id={item_id}", {
+    "action": "edit_item", "item_id": item_id, "title": title,
+    "category": "Electronics", "description": "For first-year lab work. Includes a case.",
+    "location": "Library entrance"
+})
+has(page, "Listing saved")
+has(page, "Includes a case")
+image_path = re.search(r'src="(uploads/[a-f0-9]+\.png)"', page).group(1)
+with owner.browser.open(BASE + image_path) as response:
+    assert response.headers.get_content_type() == "image/png" and response.read().startswith(b"\x89PNG")
 
 _, page = borrower.get(f"index.php?q={stamp}&category=Electronics")
 has(page, "1 item found")
@@ -82,8 +114,14 @@ has(page, "Request declined")
 url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "message": "May I try again?"})
 has(page, "Request sent")
 request_id = re.search(r'name="request_id" value="(\d+)"', page).group(1)
-url, page = owner.post("dashboard.php", {"action": "approve", "request_id": request_id})
+url, page = owner.post("dashboard.php", {"action": "approve", "request_id": request_id, "due_date": "2020-01-01"})
+has(page, "Choose a return date within the next year")
+due_date = (date.today() + timedelta(days=7)).isoformat()
+url, page = owner.post("dashboard.php", {"action": "approve", "request_id": request_id, "due_date": due_date})
 has(page, "Request approved")
+has(page, due_date)
+_, page = borrower.get("dashboard.php")
+has(page, due_date)
 _, page = owner.get(f"index.php?q={stamp}")
 has(page, "0 items found")
 url, page = owner.post("dashboard.php", {"action": "return", "request_id": request_id})
@@ -112,4 +150,4 @@ url, page = owner.post("account.php", {"action": "login", "email": f"owner{stamp
 assert "dashboard.php" in url
 has(page, "Hello, Owner Test")
 
-print("PASS: registration, login, listing, search, filter, request, cancellation, repeat request, duplicate prevention, decline, approval, return, reuse, and removal")
+print("PASS: two-account flow, owner-only editing, PNG upload, valid/invalid return dates, reuse, and removal")
