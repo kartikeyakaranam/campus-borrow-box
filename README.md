@@ -58,8 +58,8 @@ Passwords are hashed, database inputs use prepared statements, output is escaped
 
 Borrow Box does not collect money or store payment credentials. The displayed amount is a flat fee for one borrowing request. Cash or UPI is settled directly between the students at pickup, and the owner records whether they received it. Existing requests retain the fee shown when requested, even if the listing price changes later.
 
-The project report draft and actual running-site screenshots are in `report/`. The draft follows the supplied template, but its student identities, faculty, program, signatures, confirmed work split, and GitHub URL still need real information before submission.
+The project report draft and earlier running-site screenshots are in `report/`. The draft follows the supplied template but has not yet been updated for item photos, listing edits, return dates, or borrowing fees. It also needs real student identities, faculty, program, signatures, confirmed work split, and GitHub URL before submission.
 
 ## Photos
 
-Photos are optional and limited to one JPEG, PNG, or WebP under 2 MB per item. The web server must be able to write to `uploads/`. The folder is excluded from version control except for its setup files. The Apache rule in that folder blocks PHP execution; on another web server, configure the equivalent rule before accepting public uploads. New screenshots and report text should be captured after these features are tested.
+Photos are optional and limited to one JPEG, PNG, or WebP under 2 MB per item. The web server must be able to write to `uploads/`. The folder is excluded from version control except for its setup files. The Apache rule in that folder blocks PHP execution; on another web server, configure the equivalent rule before accepting public uploads. Capture fresh screenshots when updating the report.
