@@ -52,8 +52,8 @@ def has(page, text):
 
 stamp = str(int(time.time()))
 title = f"Scientific Calculator {stamp}"
-pickup = (datetime.now() + timedelta(days=1)).replace(minute=0, second=0, microsecond=0)
-return_time = pickup + timedelta(hours=4)
+pickup = (datetime.now() + timedelta(days=1)).replace(hour=9, minute=0, second=0, microsecond=0)
+return_time = pickup + timedelta(hours=6)
 schedule = {"start_at": pickup.strftime("%Y-%m-%dT%H:%M"), "end_at": return_time.strftime("%Y-%m-%dT%H:%M")}
 owner, borrower = Student(), Student()
 _, home = owner.get("index.php")
@@ -64,6 +64,10 @@ url, page = owner.post("account.php", {
 })
 assert "dashboard.php" in url
 has(page, "Welcome to Borrow Box")
+_, add_form = owner.get("add.php")
+has(add_form, "Cost per hour")
+has(add_form, "Minimum borrowing time")
+assert "Flat fee per borrow" not in add_form
 
 url, page = borrower.post("account.php", {
     "action": "register", "name": "Borrower Test", "email": f"borrower{stamp}@example.test", "password": "testpass123"
@@ -72,7 +76,7 @@ assert "dashboard.php" in url
 
 url, page = owner.post("add.php", {
     "action": "add_item", "title": title, "category": "Electronics",
-    "description": "For first-year lab work.", "location": "Library entrance", "fee": "75.00"
+    "description": "For first-year lab work.", "location": "Library entrance", "hourly_rate": "12.50", "minimum_hours": "1"
 })
 item_id = re.search(r"item.php\?id=(\d+)", url).group(1)
 has(page, title)
@@ -80,13 +84,13 @@ _, page = borrower.get(f"edit.php?id={item_id}")
 has(page, "Only your available items can be edited")
 _, page = borrower.post("dashboard.php", {
     "action": "edit_item", "item_id": item_id, "title": "Stolen title",
-    "category": "Other", "description": "Unauthorized change", "location": "Elsewhere", "fee": "1.00"
+    "category": "Other", "description": "Unauthorized change", "location": "Elsewhere", "hourly_rate": "1.00", "minimum_hours": "1"
 })
 has(page, "Only your available listing can be edited")
 url, page = owner.post_image(f"edit.php?id={item_id}", {
     "action": "edit_item", "item_id": item_id, "title": title,
     "category": "Electronics", "description": "For first-year lab work. Includes a case.",
-    "location": "Library entrance", "fee": "80.00"
+    "location": "Library entrance", "hourly_rate": "20.00", "minimum_hours": "1"
 })
 has(page, "Listing saved")
 has(page, "Includes a case")
@@ -96,7 +100,7 @@ with owner.browser.open(BASE + image_path) as response:
 
 _, page = borrower.get(f"index.php?q={stamp}&category=Electronics")
 has(page, "1 item found")
-has(page, "₹80.00 flat fee")
+has(page, "₹20.00/hour")
 _, page = borrower.get(f"index.php?q={stamp}&category=Books")
 has(page, "0 items found")
 
@@ -123,13 +127,14 @@ request_id = re.search(r'name="request_id" value="(\d+)"', page).group(1)
 url, page = owner.post(f"edit.php?id={item_id}", {
     "action": "edit_item", "item_id": item_id, "title": title,
     "category": "Electronics", "description": "For first-year lab work. Includes a case.",
-    "location": "Library entrance", "fee": "95.00"
+    "location": "Library entrance", "hourly_rate": "25.00", "minimum_hours": "1"
 })
-has(page, "₹95.00")
+has(page, "₹25.00 per hour")
 url, page = owner.post("dashboard.php", {"action": "approve", "request_id": request_id})
 has(page, "Request approved")
 has(page, return_time.strftime("%d %b %Y"))
-has(page, "₹80.00")
+has(page, "₹120.00")
+has(page, "6 billed hours")
 url, page = borrower.post("dashboard.php", {"action": "mark_paid", "request_id": request_id})
 has(page, "This payment cannot be marked received")
 url, page = owner.post("dashboard.php", {"action": "mark_paid", "request_id": request_id})
@@ -137,7 +142,7 @@ has(page, "Payment marked received")
 has(page, "Received")
 _, page = borrower.get("dashboard.php")
 has(page, return_time.strftime("%d %b %Y"))
-has(page, "₹80.00")
+has(page, "₹120.00")
 has(page, "Received")
 _, page = owner.get(f"index.php?q={stamp}")
 has(page, "0 items found")
@@ -151,7 +156,7 @@ has(page, "Request sent")
 
 url, page = owner.post("add.php", {
     "action": "add_item", "title": "Spare Lab Coat", "category": "Lab",
-    "description": "Clean, medium size.", "location": "Hostel lobby", "fee": "0.00"
+    "description": "Clean, medium size.", "location": "Hostel lobby", "hourly_rate": "5.00", "minimum_hours": "1"
 })
 second_id = re.search(r"item.php\?id=(\d+)", url).group(1)
 url, page = owner.post("dashboard.php", {"action": "delete_item", "item_id": second_id})
@@ -163,7 +168,7 @@ hourly_title = f"Camera Tripod {stamp}"
 url, page = owner.post("add.php", {
     "action": "add_item", "title": hourly_title, "category": "Other",
     "description": "Useful for class filming.", "location": "Library entrance",
-    "pricing_mode": "hourly", "fee": "0.00", "hourly_rate": "12.50", "minimum_hours": "3"
+    "hourly_rate": "12.50", "minimum_hours": "3"
 })
 hourly_id = re.search(r"item.php\?id=(\d+)", url).group(1)
 has(page, "₹12.50 per hour")
@@ -186,7 +191,7 @@ hourly_request_id = re.search(re.escape(hourly_title) + r'.*?name="request_id" v
 url, page = owner.post(f"edit.php?id={hourly_id}", {
     "action": "edit_item", "item_id": hourly_id, "title": hourly_title,
     "category": "Other", "description": "Useful for class filming.",
-    "location": "Library entrance", "pricing_mode": "hourly", "fee": "0.00",
+    "location": "Library entrance",
     "hourly_rate": "20.00", "minimum_hours": "3"
 })
 has(page, "₹20.00 per hour")
@@ -203,4 +208,4 @@ url, page = owner.post("account.php", {"action": "login", "email": f"owner{stamp
 assert "dashboard.php" in url
 has(page, "Hello, Owner Test")
 
-print("PASS: two-account flow, photos, owner-only edits, flat and hourly price snapshots, minimum duration, hour rounding, payment status, return dates, reuse, and removal")
+print("PASS: two-account flow, photos, owner-only edits, 9 AM–3 PM hourly total, rate snapshots, minimum duration, hour rounding, payment status, return dates, reuse, and removal")

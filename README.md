@@ -14,10 +14,10 @@ A student-scale full-stack web project for ICT3131: a campus item borrowing boar
 8. Remove an available listing or cancel a pending request.
 9. Edit an available listing when its details change.
 10. Agree on a pickup and return schedule; both students see it in their dashboards.
-11. Set a flat borrowing fee; the borrower chooses cash or UPI at pickup, and the owner records receipt.
-12. Choose flat or hourly pricing, set a minimum borrowing time, and calculate the cost from requested pickup and return times.
+11. Set a cost per hour and minimum borrowing time on each new listing.
+12. Show the borrower an immediate total from the selected pickup and return times; record cash or UPI payment at pickup.
 
-The novelty is a **reuse loop**: one item can help multiple students over time, with the return action reopening it for the next person. Lenders can choose a flat fee or an hourly rate and a minimum time. Borrowers see the calculated cost before requesting.
+The novelty is a **reuse loop**: one item can help multiple students over time, with the return action reopening it for the next person. Lenders set an hourly rate and minimum time. Borrowers select pickup and return times and see the total immediately before requesting.
 
 ## Run locally
 
@@ -25,7 +25,7 @@ The novelty is a **reuse loop**: one item can help multiple students over time, 
 2. Import `database/schema.sql` using phpMyAdmin or `mysql -u root -p < database/schema.sql`. For an existing database, run the migration files in order: `database/migrate_2026_10_28.sql`, `database/migrate_2026_10_28_fees.sql`, then `database/migrate_2026_10_28_hourly.sql`. Run only the migrations you have not already applied.
 3. Edit the four database constants in `config.php` to match your local MySQL settings.
 4. Put this folder inside your server's document root, then open `http://localhost/campus-borrow-box/`.
-5. Register two test accounts. With the first, list an hourly item and set its rate and minimum time. With the second, choose pickup and return times, check the quoted cost, and request it. Switch back to approve, record payment if applicable, then mark it returned.
+5. Register two test accounts. With the first, list an item at ₹25 per hour with a 2-hour minimum. With the second, select tomorrow 9:00 AM to 3:00 PM: the page should show 6 hours and ₹150 total. Send the request, then switch back to approve, record payment, and mark the item returned.
 
 For a repeatable local check, start the site at `http://127.0.0.1:8765/` and run `python3 tests/smoke.py` against a disposable test database. The script creates its own test accounts and items. It verifies the main two-account flow and leaves those test records in the database.
 
@@ -57,7 +57,7 @@ XML and AJAX were covered in the lectures but are deliberately outside this smal
 
 Passwords are hashed, database inputs use prepared statements, output is escaped, and changing forms include a CSRF token. This is suitable for a local classroom demo. There is no email verification or automated dispute handling, and pickup is coordinated manually through the request message.
 
-Borrow Box does not collect money or store payment credentials. Cash or UPI is settled directly between students at pickup, and the owner records whether they received it. For hourly listings, the requested time must meet the lender's minimum; each started hour is billed as a full hour. For example, 3 hours 15 minutes at ₹12.50 per hour costs ₹50.00. Requests can start within the next 90 days and last at most 30 days. Flat listings use one fee for the whole requested period. The server calculates the amount again when the request is submitted. Each request retains its original price, rate, duration and schedule if the listing changes later. Existing requests made before the hourly update keep their earlier date and fee.
+Borrow Box does not collect money or store payment credentials. Cash or UPI is settled directly between students at pickup, and the owner records whether they received it. The requested time must meet the lender's minimum; each started hour is billed as a full hour. For example, tomorrow 9:00 AM–3:00 PM at ₹25 per hour costs ₹150.00. A 3-hour-15-minute request at ₹12.50 per hour costs ₹50.00 because 4 hours are billed. Requests can start within the next 90 days and last at most 30 days. The browser shows the cost immediately, and the server calculates it again when the request is submitted. Each request retains its original rate, total and schedule if the listing changes later. Older flat-fee listings continue to display their earlier terms; editing one converts it to hourly pricing. Earlier requests retain their agreed fees.
 
 Pickup and return times are interpreted in India Standard Time (IST) for this campus project.
 

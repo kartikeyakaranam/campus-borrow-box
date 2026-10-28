@@ -33,11 +33,10 @@ $uid = user_id();
 if ($action === 'add_item') {
     $title=trim((string)($_POST['title']??'')); $category=(string)($_POST['category']??'');
     $description=trim((string)($_POST['description']??'')); $location=trim((string)($_POST['location']??''));
-    $mode=(string)($_POST['pricing_mode']??'flat');
-    $fee=$mode==='flat' ? (string)($_POST['fee']??'') : '0';
-    $rate=$mode==='hourly' ? (string)($_POST['hourly_rate']??'') : '0';
+    $mode='hourly'; $fee='0';
+    $rate=(string)($_POST['hourly_rate']??'');
     $minimum=filter_var($_POST['minimum_hours']??1,FILTER_VALIDATE_INT,['options'=>['min_range'=>1,'max_range'=>168]]);
-    if ($title==='' || mb_strlen($title)>100 || !in_array($category,['Books','Electronics','Lab','Other'],true) || $description==='' || mb_strlen($description)>600 || $location==='' || mb_strlen($location)>100 || !valid_money($fee,10000) || !valid_money($rate,1000) || !in_array($mode,['flat','hourly'],true) || $minimum===false) {
+    if ($title==='' || mb_strlen($title)>100 || !in_array($category,['Books','Electronics','Lab','Other'],true) || $description==='' || mb_strlen($description)>600 || $location==='' || mb_strlen($location)>100 || !valid_money($rate,1000) || (float)$rate<=0 || $minimum===false) {
         flash('Complete every field within the stated limits.', 'error'); redirect('add.php');
     }
     $fee=number_format((float)$fee,2,'.',''); $rate=number_format((float)$rate,2,'.','');
@@ -50,11 +49,10 @@ if ($action === 'edit_item') {
     $itemId=(int)($_POST['item_id']??0);
     $title=trim((string)($_POST['title']??'')); $category=(string)($_POST['category']??'');
     $description=trim((string)($_POST['description']??'')); $location=trim((string)($_POST['location']??''));
-    $mode=(string)($_POST['pricing_mode']??'flat');
-    $fee=$mode==='flat' ? (string)($_POST['fee']??'') : '0';
-    $rate=$mode==='hourly' ? (string)($_POST['hourly_rate']??'') : '0';
+    $mode='hourly'; $fee='0';
+    $rate=(string)($_POST['hourly_rate']??'');
     $minimum=filter_var($_POST['minimum_hours']??1,FILTER_VALIDATE_INT,['options'=>['min_range'=>1,'max_range'=>168]]);
-    if ($title==='' || mb_strlen($title)>100 || !in_array($category,['Books','Electronics','Lab','Other'],true) || $description==='' || mb_strlen($description)>600 || $location==='' || mb_strlen($location)>100 || !valid_money($fee,10000) || !valid_money($rate,1000) || !in_array($mode,['flat','hourly'],true) || $minimum===false) {
+    if ($title==='' || mb_strlen($title)>100 || !in_array($category,['Books','Electronics','Lab','Other'],true) || $description==='' || mb_strlen($description)>600 || $location==='' || mb_strlen($location)>100 || !valid_money($rate,1000) || (float)$rate<=0 || $minimum===false) {
         flash('Complete every field within the stated limits.', 'error'); redirect('edit.php?id='.$itemId);
     }
     $fee=number_format((float)$fee,2,'.',''); $rate=number_format((float)$rate,2,'.','');
