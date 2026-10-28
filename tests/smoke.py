@@ -69,7 +69,7 @@ assert "dashboard.php" in url
 
 url, page = owner.post("add.php", {
     "action": "add_item", "title": title, "category": "Electronics",
-    "description": "For first-year lab work.", "location": "Library entrance"
+    "description": "For first-year lab work.", "location": "Library entrance", "fee": "75.00"
 })
 item_id = re.search(r"item.php\?id=(\d+)", url).group(1)
 has(page, title)
@@ -77,13 +77,13 @@ _, page = borrower.get(f"edit.php?id={item_id}")
 has(page, "Only your available items can be edited")
 _, page = borrower.post("dashboard.php", {
     "action": "edit_item", "item_id": item_id, "title": "Stolen title",
-    "category": "Other", "description": "Unauthorized change", "location": "Elsewhere"
+    "category": "Other", "description": "Unauthorized change", "location": "Elsewhere", "fee": "1.00"
 })
 has(page, "Only your available listing can be edited")
 url, page = owner.post_image(f"edit.php?id={item_id}", {
     "action": "edit_item", "item_id": item_id, "title": title,
     "category": "Electronics", "description": "For first-year lab work. Includes a case.",
-    "location": "Library entrance"
+    "location": "Library entrance", "fee": "80.00"
 })
 has(page, "Listing saved")
 has(page, "Includes a case")
@@ -93,35 +93,52 @@ with owner.browser.open(BASE + image_path) as response:
 
 _, page = borrower.get(f"index.php?q={stamp}&category=Electronics")
 has(page, "1 item found")
+has(page, "₹80.00 flat fee")
 _, page = borrower.get(f"index.php?q={stamp}&category=Books")
 has(page, "0 items found")
 
 item_path = f"item.php?id={item_id}"
-url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "message": "Need it for Friday lab."})
+url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "message": "Missing payment choice"})
+has(page, "a payment method is missing")
+url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "payment_method": "upi", "message": "Need it for Friday lab."})
 has(page, "Request sent")
 request_id = re.search(r'name="request_id" value="(\d+)"', page).group(1)
 
 url, page = borrower.post("dashboard.php", {"action": "cancel", "request_id": request_id})
 has(page, "Request cancelled")
-url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "message": "Need it next week."})
+url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "payment_method": "upi", "message": "Need it next week."})
 has(page, "Request sent")
 request_id = re.search(r'name="request_id" value="(\d+)"', page).group(1)
-url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "message": "Duplicate request"})
+url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "payment_method": "upi", "message": "Duplicate request"})
 has(page, "already have an active request")
 
 url, page = owner.post("dashboard.php", {"action": "decline", "request_id": request_id})
 has(page, "Request declined")
-url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "message": "May I try again?"})
+url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "payment_method": "upi", "message": "May I try again?"})
 has(page, "Request sent")
 request_id = re.search(r'name="request_id" value="(\d+)"', page).group(1)
+url, page = owner.post(f"edit.php?id={item_id}", {
+    "action": "edit_item", "item_id": item_id, "title": title,
+    "category": "Electronics", "description": "For first-year lab work. Includes a case.",
+    "location": "Library entrance", "fee": "95.00"
+})
+has(page, "₹95.00")
 url, page = owner.post("dashboard.php", {"action": "approve", "request_id": request_id, "due_date": "2020-01-01"})
 has(page, "Choose a return date within the next year")
 due_date = (date.today() + timedelta(days=7)).isoformat()
 url, page = owner.post("dashboard.php", {"action": "approve", "request_id": request_id, "due_date": due_date})
 has(page, "Request approved")
 has(page, due_date)
+has(page, "₹80.00")
+url, page = borrower.post("dashboard.php", {"action": "mark_paid", "request_id": request_id})
+has(page, "This payment cannot be marked received")
+url, page = owner.post("dashboard.php", {"action": "mark_paid", "request_id": request_id})
+has(page, "Payment marked received")
+has(page, "Received")
 _, page = borrower.get("dashboard.php")
 has(page, due_date)
+has(page, "₹80.00")
+has(page, "Received")
 _, page = owner.get(f"index.php?q={stamp}")
 has(page, "0 items found")
 url, page = owner.post("dashboard.php", {"action": "return", "request_id": request_id})
@@ -129,12 +146,12 @@ has(page, "available again")
 _, page = owner.get(f"index.php?q={stamp}")
 has(page, "1 item found")
 
-url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "message": "Borrowing it again."})
+url, page = borrower.post(item_path, {"action": "request", "item_id": item_id, "payment_method": "upi", "message": "Borrowing it again."})
 has(page, "Request sent")
 
 url, page = owner.post("add.php", {
     "action": "add_item", "title": "Spare Lab Coat", "category": "Lab",
-    "description": "Clean, medium size.", "location": "Hostel lobby"
+    "description": "Clean, medium size.", "location": "Hostel lobby", "fee": "0.00"
 })
 second_id = re.search(r"item.php\?id=(\d+)", url).group(1)
 url, page = owner.post("dashboard.php", {"action": "delete_item", "item_id": second_id})
@@ -150,4 +167,4 @@ url, page = owner.post("account.php", {"action": "login", "email": f"owner{stamp
 assert "dashboard.php" in url
 has(page, "Hello, Owner Test")
 
-print("PASS: two-account flow, owner-only editing, PNG upload, valid/invalid return dates, reuse, and removal")
+print("PASS: two-account flow, owner-only editing, PNG upload, fee snapshot, payment method, owner-only receipt, return dates, reuse, and removal")

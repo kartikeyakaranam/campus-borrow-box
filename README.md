@@ -14,13 +14,14 @@ A student-scale full-stack web project for ICT3131: a campus item borrowing boar
 8. Remove an available listing or cancel a pending request.
 9. Edit an available listing when its details change.
 10. Set a return date when approving a request; both students see it in their dashboards.
+11. Set a flat borrowing fee; the borrower chooses cash or UPI at pickup, and the owner records receipt.
 
-The novelty is a **reuse loop**: one item can help multiple students over time, with the return action reopening it for the next person. The UI tells that story without needing payments, maps, or AI.
+The novelty is a **reuse loop**: one item can help multiple students over time, with the return action reopening it for the next person. A simple fee agreement makes that exchange practical without requiring an online payment gateway.
 
 ## Run locally
 
 1. Install/start MAMP or XAMPP with PHP 8.1+ and MySQL. Enable the PHP `mysqli` and `mbstring` extensions.
-2. Import `database/schema.sql` using phpMyAdmin or `mysql -u root -p < database/schema.sql`. If you already imported the earlier version, run `database/migrate_2026_10_28.sql` once instead.
+2. Import `database/schema.sql` using phpMyAdmin or `mysql -u root -p < database/schema.sql`. For an existing database, run `database/migrate_2026_10_28.sql` and then `database/migrate_2026_10_28_fees.sql` once each. If you already ran the first migration, run only the fees migration.
 3. Edit the four database constants in `config.php` to match your local MySQL settings.
 4. Put this folder inside your server's document root, then open `http://localhost/campus-borrow-box/`.
 5. Register two test accounts. With the first, list an item. With the second, request it. Switch back to approve, then mark it returned.
@@ -33,8 +34,8 @@ Do not open `index.php` as a local file; PHP must run through a web server.
 
 | Student | Two modules/pages to explain | Demo features |
 | --- | --- | --- |
-| Student 1 | Explore (`index.php`) and Item detail (`item.php`) | Search/filter; send a request; explain item photos |
-| Student 2 | List/edit item (`add.php`, `edit.php`) and Dashboard (`dashboard.php`) | Publish/edit a listing; approve with a return date; mark returned |
+| Student 1 | Explore (`index.php`) and Item detail (`item.php`) | Search/filter; send a request with a payment method; explain item photos |
+| Student 2 | List/edit item (`add.php`, `edit.php`) and Dashboard (`dashboard.php`) | Set a fee; approve with a return date; record payment and return |
 
 Both should understand `account.php`, `action.php`, `config.php`, the database tables, and the shared layout. Add your actual names, registration numbers, screenshots, code excerpts, and GitHub URL to the supplied report template. Do not claim testing that was not performed.
 
@@ -54,6 +55,8 @@ XML and AJAX were covered in the lectures but are deliberately outside this smal
 ## Security and limitations
 
 Passwords are hashed, database inputs use prepared statements, output is escaped, and changing forms include a CSRF token. This is suitable for a local classroom demo. There is no email verification or automated dispute handling, and pickup is coordinated manually through the request message.
+
+Borrow Box does not collect money or store payment credentials. The displayed amount is a flat fee for one borrowing request. Cash or UPI is settled directly between the students at pickup, and the owner records whether they received it. Existing requests retain the fee shown when requested, even if the listing price changes later.
 
 The project report draft and actual running-site screenshots are in `report/`. The draft follows the supplied template, but its student identities, faculty, program, signatures, confirmed work split, and GitHub URL still need real information before submission.
 

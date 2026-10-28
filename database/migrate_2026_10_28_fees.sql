@@ -1,0 +1,5 @@
+USE borrow_box;
+ALTER TABLE items ADD COLUMN borrowing_fee DECIMAL(8,2) NOT NULL DEFAULT 0.00;
+ALTER TABLE requests ADD COLUMN agreed_fee DECIMAL(8,2) NOT NULL DEFAULT 0.00;
+ALTER TABLE requests ADD COLUMN payment_method ENUM('cash','upi') NULL;
+ALTER TABLE requests ADD COLUMN paid_at DATETIME NULL;

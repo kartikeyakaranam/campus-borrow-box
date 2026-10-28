@@ -363,6 +363,11 @@ textarea {
   -webkit-box-orient:vertical;
   overflow:hidden
 }
+.item-card .fee-line {
+  color:var(--green);
+  font-weight:800;
+  margin-bottom:9px
+}
 .card-meta {
   display:flex;
   flex-direction:column;
@@ -551,6 +556,11 @@ textarea {
 .list-row p {
   color:var(--muted);
   margin:0
+}
+.list-row .payment-note {
+  margin-top:6px;
+  color:var(--green);
+  font-weight:650
 }
 .row-actions {
   display:flex;

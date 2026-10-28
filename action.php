@@ -30,39 +30,44 @@ $uid = user_id();
 if ($action === 'add_item') {
     $title=trim((string)($_POST['title']??'')); $category=(string)($_POST['category']??'');
     $description=trim((string)($_POST['description']??'')); $location=trim((string)($_POST['location']??''));
-    if ($title==='' || mb_strlen($title)>100 || !in_array($category,['Books','Electronics','Lab','Other'],true) || $description==='' || mb_strlen($description)>600 || $location==='' || mb_strlen($location)>100) {
+    $fee=(string)($_POST['fee']??'');
+    if ($title==='' || mb_strlen($title)>100 || !in_array($category,['Books','Electronics','Lab','Other'],true) || $description==='' || mb_strlen($description)>600 || $location==='' || mb_strlen($location)>100 || !preg_match('/^(?:0|[1-9]\d{0,4})(?:\.\d{1,2})?$/',$fee) || (float)$fee>10000) {
         flash('Complete every field within the stated limits.', 'error'); redirect('add.php');
     }
+    $fee=number_format((float)$fee,2,'.','');
     try { $image=save_item_image(); } catch (RuntimeException $error) { flash($error->getMessage(),'error'); redirect('add.php'); }
-    $s=db()->prepare('INSERT INTO items (owner_id,title,category,description,pickup_location,image_filename) VALUES (?,?,?,?,?,?)');
-    $s->bind_param('isssss',$uid,$title,$category,$description,$location,$image); $s->execute();
+    $s=db()->prepare('INSERT INTO items (owner_id,title,category,description,pickup_location,borrowing_fee,image_filename) VALUES (?,?,?,?,?,?,?)');
+    $s->bind_param('issssss',$uid,$title,$category,$description,$location,$fee,$image); $s->execute();
     flash('Your item is now listed.'); redirect('item.php?id='.db()->insert_id);
 }
 if ($action === 'edit_item') {
     $itemId=(int)($_POST['item_id']??0);
     $title=trim((string)($_POST['title']??'')); $category=(string)($_POST['category']??'');
     $description=trim((string)($_POST['description']??'')); $location=trim((string)($_POST['location']??''));
-    if ($title==='' || mb_strlen($title)>100 || !in_array($category,['Books','Electronics','Lab','Other'],true) || $description==='' || mb_strlen($description)>600 || $location==='' || mb_strlen($location)>100) {
+    $fee=(string)($_POST['fee']??'');
+    if ($title==='' || mb_strlen($title)>100 || !in_array($category,['Books','Electronics','Lab','Other'],true) || $description==='' || mb_strlen($description)>600 || $location==='' || mb_strlen($location)>100 || !preg_match('/^(?:0|[1-9]\d{0,4})(?:\.\d{1,2})?$/',$fee) || (float)$fee>10000) {
         flash('Complete every field within the stated limits.', 'error'); redirect('edit.php?id='.$itemId);
     }
+    $fee=number_format((float)$fee,2,'.','');
     $old=db()->prepare("SELECT image_filename FROM items WHERE id=? AND owner_id=? AND status='available'");
     $old->bind_param('ii',$itemId,$uid); $old->execute(); $existing=$old->get_result()->fetch_assoc();
     if (!$existing) { flash('Only your available listing can be edited.','error'); redirect('dashboard.php'); }
     try { $image=save_item_image(); } catch (RuntimeException $error) { flash($error->getMessage(),'error'); redirect('edit.php?id='.$itemId); }
     $image=$image ?? $existing['image_filename'];
-    $s=db()->prepare("UPDATE items SET title=?,category=?,description=?,pickup_location=?,image_filename=? WHERE id=? AND owner_id=? AND status='available'");
-    $s->bind_param('sssssii',$title,$category,$description,$location,$image,$itemId,$uid); $s->execute();
+    $s=db()->prepare("UPDATE items SET title=?,category=?,description=?,pickup_location=?,borrowing_fee=?,image_filename=? WHERE id=? AND owner_id=? AND status='available'");
+    $s->bind_param('ssssssii',$title,$category,$description,$location,$fee,$image,$itemId,$uid); $s->execute();
     if ($s->affected_rows && $existing['image_filename'] && $image !== $existing['image_filename']) @unlink(__DIR__.'/uploads/'.$existing['image_filename']);
     flash('Listing saved.');
     redirect('item.php?id='.$itemId);
 }
 if ($action === 'request') {
     $itemId=(int)($_POST['item_id']??0); $message=trim((string)($_POST['message']??''));
+    $method=(string)($_POST['payment_method']??'');
     if ($message==='' || mb_strlen($message)>250) { flash('Write a short message of up to 250 characters.', 'error'); redirect('item.php?id='.$itemId); }
-    $s=db()->prepare("INSERT INTO requests (item_id,borrower_id,message) SELECT id,?,? FROM items WHERE id=? AND owner_id<>? AND status='available' AND NOT EXISTS (SELECT 1 FROM requests WHERE item_id=? AND borrower_id=? AND status IN ('pending','approved'))");
-    $s->bind_param('isiiii',$uid,$message,$itemId,$uid,$itemId,$uid);
+    $s=db()->prepare("INSERT INTO requests (item_id,borrower_id,message,agreed_fee,payment_method) SELECT id,?,?,borrowing_fee,CASE WHEN borrowing_fee>0 THEN ? ELSE NULL END FROM items WHERE id=? AND owner_id<>? AND status='available' AND (borrowing_fee=0 OR ? IN ('cash','upi')) AND NOT EXISTS (SELECT 1 FROM requests WHERE item_id=? AND borrower_id=? AND status IN ('pending','approved'))");
+    $s->bind_param('issiisii',$uid,$message,$method,$itemId,$uid,$method,$itemId,$uid);
     $s->execute();
-    if ($s->affected_rows!==1) { flash('This item is unavailable or you already have an active request.', 'error'); redirect('item.php?id='.$itemId); }
+    if ($s->affected_rows!==1) { flash('This item is unavailable, a payment method is missing, or you already have an active request.', 'error'); redirect('item.php?id='.$itemId); }
     flash('Request sent to the owner.'); redirect('dashboard.php');
 }
 if ($action === 'delete_item') {
@@ -72,6 +77,13 @@ if ($action === 'delete_item') {
     $s=db()->prepare("DELETE FROM items WHERE id=? AND owner_id=? AND status='available'"); $s->bind_param('ii',$itemId,$uid); $s->execute();
     if ($s->affected_rows && $image) @unlink(__DIR__.'/uploads/'.$image);
     flash($s->affected_rows ? 'Listing removed.' : 'A borrowed item cannot be removed.', $s->affected_rows ? 'success' : 'error'); redirect('dashboard.php');
+}
+if ($action === 'mark_paid') {
+    $requestId=(int)($_POST['request_id']??0);
+    $s=db()->prepare("UPDATE requests JOIN items ON items.id=requests.item_id SET requests.paid_at=NOW() WHERE requests.id=? AND items.owner_id=? AND requests.status IN ('approved','returned') AND requests.agreed_fee>0 AND requests.paid_at IS NULL");
+    $s->bind_param('ii',$requestId,$uid); $s->execute();
+    flash($s->affected_rows ? 'Payment marked received.' : 'This payment cannot be marked received.', $s->affected_rows ? 'success' : 'error');
+    redirect('dashboard.php');
 }
 if (in_array($action,['approve','decline','return','cancel'],true)) {
     $requestId=(int)($_POST['request_id']??0);
