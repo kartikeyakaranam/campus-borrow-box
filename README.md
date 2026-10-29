@@ -23,13 +23,17 @@ The novelty is a **reuse loop**: one item can help multiple students over time, 
 
 1. Install/start MAMP or XAMPP with PHP 8.1+ and MySQL. Enable the PHP `mysqli` and `mbstring` extensions.
 2. Import `database/schema.sql` using phpMyAdmin or `mysql -u root -p < database/schema.sql`. For an existing database, run the migration files in order: `database/migrate_2026_10_28.sql`, `database/migrate_2026_10_28_fees.sql`, then `database/migrate_2026_10_28_hourly.sql`. Run only the migrations you have not already applied.
-3. Edit the four database constants in `config.php` to match your local MySQL settings.
+3. For MAMP/XAMPP database settings, copy `deployment/config.local.example.php` to `config.local.php` and fill in the four values. `config.local.php` is ignored by Git. If your local MySQL uses `root` with no password and a database named `borrow_box`, the defaults work without this file.
 4. Put this folder inside your server's document root, then open `http://localhost/campus-borrow-box/`.
 5. Register two test accounts. With the first, list an item at ₹25 per hour with a 2-hour minimum. With the second, select tomorrow 9:00 AM to 3:00 PM: the page should show 6 hours and ₹150 total. Send the request, then switch back to approve, record payment, and mark the item returned.
 
 For a repeatable local check, start the site at `http://127.0.0.1:8765/` and run `python3 tests/smoke.py` against a disposable test database. The script creates its own test accounts and items. It verifies the main two-account flow and leaves those test records in the database.
 
 Do not open `index.php` as a local file; PHP must run through a web server.
+
+## Deploy
+
+Run `python3 deployment/package.py` to create `Borrow_Box_Deployment_Ready.zip` in the parent folder. Its `htdocs/` contains only the public app files; its `setup/` contains the fresh database schema, a database settings example, and [deployment steps](deployment/README.md). Do not upload the report, tests, or a local database export. A hosting account and a new MySQL database are required before the site can go live.
 
 ## Suggested two-person demo and report split
 

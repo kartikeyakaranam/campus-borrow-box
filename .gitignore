@@ -2,3 +2,4 @@
 !/uploads/.htaccess
 !/uploads/.gitkeep
 /report/~$*
+/config.local.php

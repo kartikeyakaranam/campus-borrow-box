@@ -1,22 +1,36 @@
 <?php
 declare(strict_types=1);
+ini_set('session.use_strict_mode', '1');
+session_set_cookie_params([
+    'httponly' => true,
+    'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+    'samesite' => 'Lax',
+]);
 session_start();
 date_default_timezone_set('Asia/Kolkata');
 
-const DB_HOST = 'localhost';
-const DB_NAME = 'borrow_box';
-const DB_USER = 'root';
-const DB_PASS = '';
+$settingsFile = __DIR__ . '/config.local.php';
+$dbSettings = is_file($settingsFile) ? require $settingsFile : [];
+if (!is_array($dbSettings)) {
+    http_response_code(500);
+    exit('Database settings are invalid.');
+}
+define('DB_HOST', (string) ($dbSettings['host'] ?? (getenv('BORROW_BOX_DB_HOST') ?: 'localhost')));
+define('DB_NAME', (string) ($dbSettings['name'] ?? (getenv('BORROW_BOX_DB_NAME') ?: 'borrow_box')));
+define('DB_USER', (string) ($dbSettings['user'] ?? (getenv('BORROW_BOX_DB_USER') ?: 'root')));
+define('DB_PASS', (string) ($dbSettings['password'] ?? (getenv('BORROW_BOX_DB_PASS') ?: '')));
 
 function db(): mysqli {
     static $connection = null;
     if ($connection === null) {
-        $connection = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-        if ($connection->connect_error) {
+        try {
+            $connection = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+            $connection->set_charset('utf8mb4');
+        } catch (mysqli_sql_exception $error) {
+            error_log('Borrow Box database connection failed: ' . $error->getMessage());
             http_response_code(500);
-            exit('Database connection failed. Check config.php and import database/schema.sql.');
+            exit('Database unavailable. Check the site setup.');
         }
-        $connection->set_charset('utf8mb4');
     }
     return $connection;
 }
