@@ -15,7 +15,7 @@ document.querySelectorAll('textarea[maxlength]').forEach((field) => {
   update();
 });
 
-// A small DOM interaction from the course: category changes refresh the search.
+// Update search results when the category changes.
 const category = document.querySelector('#category[name="category"]');
 if (category && category.closest('.filters')) {
   category.addEventListener('change', () => category.form.requestSubmit());

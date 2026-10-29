@@ -1,4 +1,4 @@
-"""End-to-end classroom smoke test. Run against a disposable local database."""
+"""End-to-end smoke test for a disposable local database."""
 from http.cookiejar import CookieJar
 from urllib.parse import urlencode
 from urllib.request import build_opener, HTTPCookieProcessor, Request
