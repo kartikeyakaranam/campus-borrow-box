@@ -33,7 +33,9 @@ Do not open `index.php` as a local file; PHP must run through a web server.
 
 ## Deploy
 
-Run `python3 deployment/package.py` to create `Borrow_Box_Deployment_Ready.zip` in the parent folder. Its `htdocs/` contains only the public app files; its `setup/` contains the fresh database schema, a database settings example, and [deployment steps](deployment/README.md). Do not upload the report, tests, or a local database export. A hosting account and a new MySQL database are required before the site can go live.
+The site is deployed at **https://campus-borrow-box.infinityfree.me/** using InfinityFree PHP hosting and a fresh MySQL database. Run `python3 deployment/package.py` to create two ZIPs in the parent folder. `Borrow_Box_Deployment_Ready.zip` includes `htdocs/` app files and `setup/` instructions/schema; `Borrow_Box_Web_Files.zip` contains only the files to extract in the host's `htdocs/`. See [deployment steps](deployment/README.md). Do not upload the report, tests, or a local database export. Keep the production `config.local.php` out of Git and shared ZIPs.
+
+On 29 October 2026, the hosted site was checked with two newly registered test accounts: login, a photographed hourly listing, combined keyword/category search, a six-hour ₹150 cost preview and request, owner approval, and return to available status. The user asked to keep those test accounts and records for review. The live site does not contain the local development database.
 
 ## Suggested two-person demo and report split
 
@@ -59,7 +61,7 @@ XML and AJAX were covered in the lectures but are deliberately outside this smal
 
 ## Security and limitations
 
-Passwords are hashed, database inputs use prepared statements, output is escaped, and changing forms include a CSRF token. This is suitable for a local classroom demo. There is no email verification or automated dispute handling, and pickup is coordinated manually through the request message.
+Passwords are hashed, database inputs use prepared statements, output is escaped, and changing forms include a CSRF token. The hosted site is a small classroom demonstration. There is no email verification or automated dispute handling, and pickup is coordinated manually through the request message.
 
 Borrow Box does not collect money or store payment credentials. Cash or UPI is settled directly between students at pickup, and the owner records whether they received it. The requested time must meet the lender's minimum; each started hour is billed as a full hour. For example, tomorrow 9:00 AM–3:00 PM at ₹25 per hour costs ₹150.00. A 3-hour-15-minute request at ₹12.50 per hour costs ₹50.00 because 4 hours are billed. Requests can start within the next 90 days and last at most 30 days. The browser shows the cost immediately, and the server calculates it again when the request is submitted. Each request retains its original rate, total and schedule if the listing changes later. Older flat-fee listings continue to display their earlier terms; editing one converts it to hourly pricing. Earlier requests retain their agreed fees.
 
