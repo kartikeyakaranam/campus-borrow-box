@@ -1,13 +1,13 @@
 :root {
-  --ink:#18251f;
-  --muted:#58675d;
-  --green:#214d35;
-  --green-dark:#163a28;
-  --cream:#f8f6ef;
-  --paper:#fffefa;
-  --line:#d8dfd5;
-  --orange:#edaa66;
-  --soft:#e9efe5;
+  --ink:#25213b;
+  --muted:#625d73;
+  --green:#473b91;
+  --green-dark:#342a70;
+  --cream:#f7f5fc;
+  --paper:#ffffff;
+  --line:#ded9ee;
+  --orange:#e57a5e;
+  --soft:#eeeafb;
   --danger:#9b3730
 }
 * {
@@ -115,7 +115,7 @@ button {
   letter-spacing:.16em;
   font-size:.75rem;
   font-weight:800;
-  color:#436c50;
+  color:#594aa0;
   margin:0 0 18px
 }
 .hero h1,.page-intro h1,.detail-content h1 {
@@ -173,13 +173,13 @@ button {
   width:330px;
   height:330px;
   border-radius:50%;
-  background:#e5eadf
+  background:#e9e3fa
 }
 .art-book,.art-calc,.art-note {
   position:absolute;
   display:grid;
   place-items:center;
-  box-shadow:0 12px 20px #1f382329;
+  box-shadow:0 12px 20px #30264a29;
   font-weight:800
 }
 .art-book {
@@ -187,18 +187,18 @@ button {
   height:190px;
   top:45px;
   left:50px;
-  background:#e9a864;
-  color:#54381f;
+  background:#f0a18c;
+  color:#5c2f32;
   transform:rotate(-14deg);
   border-radius:5px;
-  border-left:12px solid #c48140
+  border-left:12px solid #d87768
 }
 .art-calc {
   width:105px;
   height:150px;
   top:100px;
   right:43px;
-  background:#244f39;
+  background:#5145a0;
   color:white;
   border-radius:15px;
   transform:rotate(13deg);
@@ -210,8 +210,8 @@ button {
   height:80px;
   bottom:8px;
   left:115px;
-  background:#f5d986;
-  color:#5a4a19;
+  background:#f7df9f;
+  color:#51412a;
   transform:rotate(5deg);
   line-height:1.2
 }
@@ -264,7 +264,7 @@ button {
 }
 input,select,textarea {
   width:100%;
-  border:1px solid #bfcbbf;
+  border:1px solid #c9c2dc;
   border-radius:7px;
   padding:11px 12px;
   background:white;
@@ -301,8 +301,8 @@ textarea {
   display:grid;
   place-items:center;
   height:155px;
-  background:#e5ecdf;
-  color:#315c3d;
+  background:#eae5fa;
+  color:#473b91;
   font-size:5rem
 }
 .item-photo {
@@ -393,7 +393,7 @@ textarea {
   text-decoration:underline
 }
 .how {
-  background:#e8ede4;
+  background:#eeeafb;
   border-radius:18px;
   padding:36px 42px;
   margin:0 0 72px
@@ -405,7 +405,7 @@ textarea {
   margin-top:24px
 }
 .steps strong {
-  color:#4f7659
+  color:#6658a7
 }
 .steps h3 {
   margin:8px 0
@@ -461,8 +461,8 @@ textarea {
   padding:14px 18px;
   margin-top:22px;
   border-radius:8px;
-  background:#e1efdf;
-  color:#205137
+  background:#e9e3fa;
+  color:#473b91
 }
 .notice.error {
   background:#f7e7e4;
@@ -613,7 +613,7 @@ textarea {
   color:#755f21
 }
 .status.approved {
-  color:#246944
+  color:#356d61
 }
 .status.declined {
   color:var(--danger)
